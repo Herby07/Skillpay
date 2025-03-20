@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stack Physics</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: #87CEEB;
+    }
+    /* Conteneur de jeu avec une hauteur réduite pour laisser la place au bouton cash-out */
+    #game-container {
+      position: relative;
+      overflow: hidden;
+      width: 400px;
+      height: 550px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 10px;
+      box-shadow: 0 0 30px rgba(0,0,0,0.3);
+    }
+    canvas {
+      background: #87CEEB;
+      display: block;
+    }
+    /* Affichage de la cote en haut à gauche */
+    #coteDisplay {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 20px;
+      font-weight: bold;
+      color: black;
+      text-shadow: 1px 1px 2px white;
+    }
+    /* Affichage de la balance en haut à droite */
+    #balanceDisplay {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 20px;
+      font-weight: bold;
+      color: green;
+      text-shadow: 1px 1px 2px white;
+    }
+    /* Bouton cash-out en bas (caché au départ) */
+    #actionBtn {
+      position: absolute;
+      bottom: 0px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 10px;
+      font-size: 18px;
+      background: #FF4757;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 25px;
+      transition: all 0.3s;
+      display: none;
+    }
+    #actionBtn:hover {
+      background: #FF6B81;
+      transform: translateX(-50%) scale(1.05);
+    }
+    /* Écran de démarrage pour saisir la mise – le bouton Jouer est centré */
+    #startScreen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    #startScreen input {
+      padding: 10px;
+      font-size: 18px;
+      margin-bottom: 10px;
+      width: 60%;
+    }
+    #startScreen button {
+      padding: 10px 20px;
+      font-size: 18px;
+      background: #FF4757;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 25px;
+      transition: all 0.3s;
+    }
+    #startScreen button:hover {
+      background: #FF6B81;
+      transform: scale(1.05);
+    }
+    /* Message de défaite */
+    #lossMessage {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 48px;
+      color: #FF4757;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+      opacity: 0;
+      animation: fadeInOut 2s ease-in-out;
+      display: none;
+    }
+    /* Message de victoire */
+    #winMessage {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 36px;
+      color: #2ecc71;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+      opacity: 0;
+      animation: fadeInOut 2s ease-in-out;
+      display: none;
+      text-align: center;
+    }
+    /* Animation de vagues pour le chargement de la balance */
+    .loading-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .loading-screen::after {
+      content: '';
+      width: 60px;
+      height: 60px;
+      border: 4px solid rgba(42, 42, 114, 0.5);
+      border-radius: 50%;
+      animation: wave 1.5s infinite ease-in-out;
+    }
+    .loading-screen::before {
+      content: '';
+      width: 60px;
+      height: 60px;
+      border: 4px solid rgba(42, 42, 114, 0.5);
+      border-radius: 50%;
+      animation: wave 1.5s infinite 0.75s ease-in-out;
+      position: absolute;
+    }
+    @keyframes wave {
+      0% {
+        transform: scale(0.2);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 0;
+      }
+    }
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+      20% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+      80% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+      100% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+    }
+  </style>
+</head>
+<body>
+  <!-- Écran de chargement -->
+  <div class="loading-screen" id="loadingScreen"></div>
+
+  <!-- Contenu principal (masqué pendant le chargement) -->
+  <div id="game-container" style="display: none;">
+    <canvas id="gameCanvas"></canvas>
+    <div id="coteDisplay">Cote: <span id="coteValue">0X</span></div>
+    <div id="balanceDisplay">Balance: <span id="balanceValue">chargement</span> G</div>
+    <button id="actionBtn">Cash-out</button>
+    <div id="lossMessage">Perdu !</div>
+    <div id="winMessage">Gagné !<br><span id="winAmount"></span></div>
+    <div id="startScreen">
+      <input type="number" id="betInput" placeholder="Entrez votre mise" min="1">
+      <button id="startBtn">Jouer</button>
+    </div>
+  </div>
+
+  <script type="module">
+    // Import Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
+    import { getDatabase, ref, get, update } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-database.js";
+    
+    // Configuration Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyDpB3ReBKoVpat27O7udxzIHboJcUf5nvs",
+      authDomain: "guess-90225.firebaseapp.com",
+      databaseURL: "https://guess-90225-default-rtdb.firebaseio.com",
+      projectId: "guess-90225",
+      storageBucket: "guess-90225.appspot.com",
+      messagingSenderId: "352495188082",
+      appId: "1:352495188082:web:8203d454ca1a1fd5642aeb"
+    };
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+
+    // Vérifier la présence d'un identifiant utilisateur dans le sessionStorage
+    const userId = sessionStorage.getItem("userPhone");
+    if (!userId) {
+      window.location.href = "index.html";
+    }
+
+    // Références aux éléments du DOM
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = 400;
+    canvas.height = 500; // Hauteur réduite pour laisser de l'espace en bas
+
+    let isGameOver = false;
+    let gameStarted = false;
+    let score = 0; // Début à 1 pour afficher "1X" dès la première manche
+    let cubeSize = 30;
+    const gravity = 1.5;
+    let blocks = [];
+    let currentCube = null;
+    let betAmount = 0;
+    let balance = 1000; // Valeur par défaut, remplacée par la balance en Firebase
+
+    // Références UI
+    const coteDisplay = document.getElementById("coteValue");
+    const balanceDisplay = document.getElementById("balanceValue");
+    const actionBtn = document.getElementById("actionBtn");
+    const startScreen = document.getElementById("startScreen");
+    const betInput = document.getElementById("betInput");
+    const startBtn = document.getElementById("startBtn");
+    const lossMessage = document.getElementById("lossMessage");
+    const winMessage = document.getElementById("winMessage");
+    const winAmount = document.getElementById("winAmount");
+    const loadingScreen = document.getElementById("loadingScreen");
+    const gameContainer = document.getElementById("game-container");
+
+    // Charger la balance du joueur depuis Firebase
+    const userRef = ref(database, 'users/' + userId);
+    get(userRef).then(snapshot => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        balance = data.balance;
+        balanceDisplay.innerText = balance;
+        // Masquer l'écran de chargement et afficher le contenu principal
+        loadingScreen.style.display = "none";
+        gameContainer.style.display = "block";
+      } else {
+        console.log("Aucune donnée pour cet utilisateur");
+      }
+    }).catch(error => {
+      console.error(error);
+    });
+
+    // Fonction pour mettre à jour la balance dans Firebase
+    function updateBalanceInFirebase() {
+      update(ref(database, 'users/' + userId), {
+        balance: balance
+      });
+    }
+
+    // Configuration du bateau
+    const boat = {
+      x: canvas.width / 2 - 75,
+      y: canvas.height - 50,
+      width: 150,
+      height: 30
+    };
+
+    let oscillator = {
+      x: canvas.width / 2,
+      y: 50,
+      length: 150,
+      angle: 0,
+      speed: 0.03,
+      direction: 1,
+    };
+
+    function updateOscillator() {
+      if (!isGameOver && gameStarted) {
+        oscillator.angle += oscillator.speed * oscillator.direction;
+        if (Math.abs(oscillator.angle) >= Math.PI / 3) {
+          oscillator.direction *= -1;
+        }
+      }
+    }
+
+    function createNewCube() {
+      return {
+        x: oscillator.x + oscillator.length * Math.sin(oscillator.angle) - cubeSize / 2,
+        y: oscillator.y + oscillator.length * Math.cos(oscillator.angle),
+        size: cubeSize,
+        velocityX: 0,
+        velocityY: 0,
+        rotation: 0,
+        unstable: false,
+        unstableTimer: 0,
+        falling: false
+      };
+    }
+
+    // Au clic sur le canvas, si le cube est attaché, on le lâche
+    function dropCube() {
+      if (currentCube && !currentCube.falling && !isGameOver && gameStarted) {
+        const angle = oscillator.angle;
+        const angularSpeed = oscillator.speed * oscillator.direction;
+        currentCube.velocityX = oscillator.length * Math.cos(angle) * angularSpeed;
+        currentCube.velocityY = -oscillator.length * Math.sin(angle) * angularSpeed;
+        currentCube.falling = true;
+      }
+    }
+
+    function checkCollision(rect1, rect2) {
+      return rect1.x < rect2.x + (rect2.size || rect2.width) &&
+             rect1.x + rect1.size > rect2.x &&
+             rect1.y < rect2.y + (rect2.size || rect2.height) &&
+             rect1.y + rect1.size > rect2.y;
+    }
+
+    function updateFallingCube() {
+      if (currentCube && currentCube.falling) {
+        currentCube.x += currentCube.velocityX;
+        currentCube.y += currentCube.velocityY;
+        currentCube.velocityY += gravity;
+
+        const lastBlock = blocks[blocks.length - 1] || boat;
+        if (blocks.length > 0 && checkCollision(currentCube, boat)) {
+          gameOver();
+          return;
+        }
+        if (currentCube.y > canvas.height) {
+          gameOver();
+          return;
+        }
+        if (checkCollision(currentCube, lastBlock)) {
+          const overlap = Math.min(
+            currentCube.x + currentCube.size,
+            lastBlock.x + (lastBlock.size || lastBlock.width)
+          ) - Math.max(currentCube.x, lastBlock.x);
+          if (overlap < currentCube.size / 2) {
+            currentCube.unstable = true;
+            currentCube.unstableTimer = 30;
+          } else {
+            placeCube(currentCube.x, lastBlock.y - currentCube.size);
+            currentCube = null;
+          }
+        }
+      }
+    }
+
+    function updateBlocks() {
+      blocks.forEach(block => {
+        if (block.unstableTimer > 0) {
+          block.unstableTimer--;
+          block.rotation = (30 - block.unstableTimer) * 0.05;
+          if (block.unstableTimer <= 0) {
+            block.falling = true;
+          }
+        }
+        if (block.falling) {
+          block.y += 5;
+          block.rotation += 0.1;
+          if (checkCollision(block, boat) || block.y > canvas.height) {
+            gameOver();
+          }
+        }
+      });
+    }
+
+    function placeCube(x, y) {
+      blocks.push({
+        x,
+        y,
+        size: currentCube.size,
+        unstable: false,
+        falling: false,
+        unstableTimer: 0,
+        rotation: 0
+      });
+      score++; // Augmenter la cote
+      coteDisplay.innerText = score + "X";
+      cubeSize = Math.max(15, cubeSize * 0.8);
+      oscillator.speed *= 1.1;
+      currentCube = null;
+      updateCashOutButton();
+    }
+
+    function gameOver() {
+      if (!isGameOver) {
+        isGameOver = true;
+        lossMessage.style.display = "block";
+        lossMessage.style.animation = "fadeInOut 2s ease-in-out";
+        // Mise à jour de la balance dans Firebase en cas de défaite
+        updateBalanceInFirebase();
+        setTimeout(() => {
+          lossMessage.style.display = "none";
+          resetGame();
+        }, 2000);
+      }
+    }
+
+    function cashOut() {
+      // Le joueur récupère sa mise multipliée par la cote
+      const winnings = betAmount * score;
+      balance += winnings;
+      balanceDisplay.innerText = balance;
+      updateBalanceInFirebase();
+      // Afficher le message de victoire
+      winAmount.innerText = `+${winnings} G`;
+      winMessage.style.display = "block";
+      winMessage.style.animation = "fadeInOut 2s ease-in-out";
+      setTimeout(() => {
+        winMessage.style.display = "none";
+        resetGame();
+      }, 2000);
+    }
+
+    function resetGame() {
+      isGameOver = false;
+      gameStarted = false;
+      blocks = [];
+      score = 0;
+      cubeSize = 30;
+      currentCube = null;
+      oscillator = {
+        x: canvas.width / 2,
+        y: 50,
+        length: 150,
+        angle: 0,
+        speed: 0.03,
+        direction: 1,
+      };
+      coteDisplay.innerText = score + "X";
+      actionBtn.style.display = "none";
+      startScreen.style.display = "flex";
+    }
+
+    function updateCashOutButton() {
+      // Le bouton affiche le gain potentiel (mise x cote)
+      actionBtn.innerText = "Cash-out (" + (betAmount * score) + " G)";
+    }
+
+    function drawBoat() {
+      ctx.fillStyle = "#6b4226";
+      ctx.beginPath();
+      ctx.roundRect(boat.x, boat.y, boat.width, boat.height, 10);
+      ctx.fill();
+    }
+
+    function drawCube(x, y, size, rotation, unstable) {
+      ctx.save();
+      ctx.translate(x + size / 2, y + size / 2);
+      ctx.rotate(rotation);
+      ctx.fillStyle = unstable ? "#FF9F43" : "#3498db";
+      ctx.beginPath();
+      ctx.roundRect(-size / 2, -size / 2, size, size, 5);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#87CEEB";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      drawBoat();
+      blocks.forEach(block => {
+        drawCube(block.x, block.y, block.size, block.rotation, block.unstable);
+      });
+      if (currentCube) {
+        drawCube(currentCube.x, currentCube.y, currentCube.size, currentCube.rotation, currentCube.unstable);
+      }
+      // Dessiner l'oscillateur
+      ctx.beginPath();
+      ctx.moveTo(oscillator.x, oscillator.y);
+      ctx.lineTo(
+        oscillator.x + oscillator.length * Math.sin(oscillator.angle),
+        oscillator.y + oscillator.length * Math.cos(oscillator.angle)
+      );
+      ctx.strokeStyle = "#2c3e50";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
+    function gameLoop() {
+      if (gameStarted && !isGameOver) {
+        updateOscillator();
+        if (currentCube && !currentCube.falling) {
+          currentCube.x = oscillator.x + oscillator.length * Math.sin(oscillator.angle) - cubeSize / 2;
+          currentCube.y = oscillator.y + oscillator.length * Math.cos(oscillator.angle);
+        }
+        updateFallingCube();
+        updateBlocks();
+        draw();
+        if (!currentCube && !isGameOver) {
+          currentCube = createNewCube();
+        }
+        requestAnimationFrame(gameLoop);
+      }
+    }
+
+    // Lancement depuis l'écran de mise
+    startBtn.addEventListener("click", function() {
+      const bet = parseInt(betInput.value);
+      if (isNaN(bet) || bet < 10) {
+        alert("La mise minimale est de 10G.");
+        return;
+      }
+      if (bet > balance) {
+        alert("Fonds insuffisants. Votre balance est de " + balance + " G.");
+        return;
+      }
+      betAmount = bet;
+      balance -= betAmount;
+      balanceDisplay.innerText = balance;
+      updateBalanceInFirebase(); // Mise à jour de la balance dès la déduction de la mise
+      gameStarted = true;
+      startScreen.style.display = "none";
+      actionBtn.style.display = "block";
+      updateCashOutButton();
+      gameLoop();
+    });
+
+    // Bouton cash-out
+    actionBtn.addEventListener("click", function() {
+      if (gameStarted && score > 0 && !isGameOver) {
+        cashOut();
+      }
+    });
+
+    // Clic sur le canvas pour lâcher le cube
+    canvas.addEventListener("click", dropCube);
+  </script>
+</body>
+</html>

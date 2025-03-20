@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="fr">  
+<head>  
+  <meta charset="UTF-8">  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+  <title>Authentification - Arcade Nexus</title>  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">  
+  <style>  
+    :root {  
+      --primary: #2a2a72;  
+      --secondary: #009ffd;  
+      --accent: #ff3c00;  
+      --light: #f4f6ff;  
+      --dark: #1a1a2e;  
+      --shadow: 0 4px 6px rgba(0,0,0,0.1);  
+    }
+
+    * {  
+      box-sizing: border-box;  
+      margin: 0;  
+      padding: 0;  
+    }  
+
+    body {  
+      font-family: 'Segoe UI', system-ui, sans-serif;  
+      background: var(--light);  
+      color: var(--dark);  
+      min-height: 100vh;  
+      display: flex;  
+      align-items: center;  
+      justify-content: center;  
+      padding: 1rem;  
+    }  
+
+    .auth-container {  
+      width: 100%;  
+      max-width: 800px;  
+      background: white;  
+      border-radius: 16px;  
+      box-shadow: var(--shadow);  
+      display: flex;  
+      overflow: hidden;  
+    }  
+
+    .auth-switcher {  
+      width: 40%;  
+      background: linear-gradient(135deg, var(--primary), var(--secondary));  
+      padding: 2rem;  
+      color: white;  
+      display: flex;  
+      flex-direction: column;  
+      align-items: center;  
+      justify-content: center;  
+      gap: 1rem;  
+      text-align: center;  
+    }  
+
+    .auth-form-container {  
+      width: 60%;  
+      padding: 3rem 2rem;  
+      position: relative;  
+    }  
+
+    .auth-form {  
+      width: 100%;  
+      max-width: 400px;  
+      margin: 0 auto;  
+      display: none;  
+    }  
+
+    .auth-form.active {  
+      display: block;  
+    }  
+
+    h2 {  
+      color: var(--primary);  
+      margin-bottom: 2rem;  
+      text-align: center;  
+      display: flex;  
+      align-items: center;  
+      justify-content: center;  
+      gap: 0.5rem;  
+    }  
+
+    .input-group {  
+      margin-bottom: 1.5rem;  
+      position: relative;  
+      display: flex;  
+      align-items: center;  
+    }  
+
+    .phone-prefix {  
+      position: absolute;  
+      left: 3rem;  
+      color: #666;  
+      font-weight: 500;  
+      pointer-events: none;  
+    }  
+
+    input {  
+      width: 100%;  
+      padding: 1rem 1rem 1rem 6rem;  
+      border: 2px solid #e0e0e0;  
+      border-radius: 8px;  
+      font-size: 1rem;  
+      transition: border-color 0.3s ease;  
+    }  
+
+    input:focus {  
+      outline: none;  
+      border-color: var(--secondary);  
+    }  
+
+    .btn {  
+      width: 100%;  
+      padding: 1rem;  
+      background: var(--primary);  
+      color: white;  
+      border: none;  
+      border-radius: 8px;  
+      font-size: 1.1rem;  
+      cursor: pointer;  
+      transition: all 0.3s ease;  
+      display: flex;  
+      align-items: center;  
+      justify-content: center;  
+      gap: 0.5rem;  
+      position: relative;  
+      overflow: hidden;  
+    }  
+
+    .btn:hover:not(.loading) {  
+      background: var(--secondary);  
+      transform: translateY(-2px);  
+      box-shadow: var(--shadow);  
+    }  
+
+    .switch-btn {  
+      background: none;  
+      border: 2px solid white;  
+      margin-top: 1rem;  
+      width: auto;  
+      padding: 0.8rem 1.5rem;  
+    }  
+
+    .message {  
+      padding: 1rem;  
+      border-radius: 8px;  
+      margin-top: 1.5rem;  
+      text-align: center;  
+      border: 2px solid transparent;  
+    }  
+
+    .error {  
+      background: #ffebee;  
+      border-color: #ef5350;  
+      color: #d32f2f;  
+    }  
+
+    /* Animation de vagues */
+    .btn.loading::after {
+      content: '';
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 255, 255, 0.5);
+      border-radius: 50%;
+      animation: wave 1s infinite linear;
+    }
+
+    .btn.loading::before {
+      content: '';
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 255, 255, 0.5);
+      border-radius: 50%;
+      animation: wave 1s infinite 0.5s linear;
+    }
+
+    .btn.loading span {
+      visibility: hidden;
+    }
+
+    @keyframes wave {
+      0% {
+        transform: scale(0.2);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 0;
+      }
+    }
+
+    @media (max-width: 768px) {  
+      .auth-container {  
+        flex-direction: column;  
+      }  
+
+      .auth-switcher, .auth-form-container {  
+        width: 100%;  
+      }  
+
+      .auth-switcher {  
+        padding: 2rem 1rem;  
+      }  
+
+      input {  
+        padding-left: 5.5rem;  
+      }  
+
+      .phone-prefix {  
+        left: 2.5rem;  
+      }  
+    }
+
+  </style>  
+</head>  
+<body>  
+  <div class="auth-container">  
+    <div class="auth-switcher">  
+      <button class="btn switch-btn" data-form="login">  
+        <i class="fas fa-sign-in-alt"></i>  
+        Connexion  
+      </button>  
+      <button class="btn switch-btn" data-form="register">  
+        <i class="fas fa-user-plus"></i>  
+        Inscription  
+      </button>  
+    </div>  
+
+    <div class="auth-form-container">  
+      <!-- Formulaire d'inscription -->  
+      <form class="auth-form active" id="registerForm">  
+        <h2><i class="fas fa-user-plus"></i> Créer un compte</h2>  
+          
+        <div class="input-group">  
+          <span class="phone-prefix">+509</span>  
+          <input   
+            type="tel"   
+            id="registerPhone"   
+            placeholder="numero de telephone"  
+            required  
+            pattern="[0-9]{8}"  
+            title="8 chiffres sans espace"  
+          >  
+        </div>  
+
+        <div class="input-group">  
+          <input   
+            type="password"   
+            id="registerPassword"   
+            placeholder="Mot de passe "  
+            required  
+            minlength="4"  
+          >  
+        </div>  
+
+        <button type="submit" class="btn">  
+          <span>
+            <i class="fas fa-check"></i>  
+            S'inscrire
+          </span>
+        </button>  
+        <div class="message" id="registerMessage"></div>  
+      </form>  
+
+      <!-- Formulaire de connexion -->  
+      <form class="auth-form" id="loginForm">  
+        <h2><i class="fas fa-sign-in-alt"></i> Connexion</h2>  
+          
+        <div class="input-group">  
+          <span class="phone-prefix">+509</span>  
+          <input   
+            type="tel"   
+            id="loginPhone"   
+            placeholder="numero de telephone"  
+            required  
+            pattern="[0-9]{8}"  
+            title="8 chiffres sans espace"  
+          >  
+        </div>  
+
+        <div class="input-group">  
+          <input   
+            type="password"   
+            id="loginPassword"   
+            placeholder="Mot de passe"  
+            required  
+          >  
+        </div>  
+
+        <button type="submit" class="btn">  
+          <span>
+            <i class="fas fa-check"></i>  
+            Se connecter
+          </span>
+        </button>  
+        <div class="message" id="loginMessage"></div>  
+      </form>  
+    </div>
+  </div>    
+
+  <script type="module">  
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";  
+    import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-database.js";  
+  
+    const firebaseConfig = {  
+      apiKey: "AIzaSyDpB3ReBKoVpat27O7udxzIHboJcUf5nvs",  
+      authDomain: "guess-90225.firebaseapp.com",  
+      databaseURL: "https://guess-90225-default-rtdb.firebaseio.com",  
+      projectId: "guess-90225",  
+      storageBucket: "guess-90225.appspot.com",  
+      messagingSenderId: "352495188082",  
+      appId: "1:352495188082:web:8203d454ca1a1fd5642aeb"  
+    };  
+  
+    const app = initializeApp(firebaseConfig);  
+    const database = getDatabase(app);  
+  
+    // Gestion de l'interface  
+    const forms = {  
+      register: document.getElementById('registerForm'),  
+      login: document.getElementById('loginForm')  
+    };  
+  
+    document.querySelectorAll('.switch-btn').forEach(btn => {  
+      btn.addEventListener('click', (e) => {  
+        const formType = e.target.dataset.form;  
+        showForm(formType);  
+      });  
+    });  
+  
+    function showForm(formType) {  
+      Object.values(forms).forEach(form => form.classList.remove('active'));  
+      forms[formType].classList.add('active');  
+    }  
+  
+    // Gestion de l'inscription  
+    forms.register.addEventListener('submit', async (e) => {  
+      e.preventDefault();  
+      const button = e.target.querySelector('button[type="submit"]');
+      button.classList.add('loading');
+      button.disabled = true;
+
+      try {
+        const phone = document.getElementById('registerPhone').value.trim();  
+        const password = document.getElementById('registerPassword').value.trim();  
+        const message = document.getElementById('registerMessage');  
+
+        if (!validatePhone(phone, message)) return;  
+        if (!validatePassword(password, message)) return;  
+
+        const userRef = ref(database, `users/${phone}`);  
+
+        const snapshot = await get(userRef);  
+        if (snapshot.exists()) {  
+          showMessage(message, '❌ Ce numéro est déjà enregistré', 'error');  
+          return;  
+        }  
+
+        await set(userRef, {  
+          password: password,  
+          balance: 0.00,  
+          created: Date.now()  
+        });  
+
+        sessionStorage.setItem('userPhone', phone);  
+        window.location.href = 'home.html';  
+      } catch (error) {  
+        showMessage(message, `❌ Erreur: ${error.message}`, 'error');  
+      } finally {
+        button.classList.remove('loading');
+        button.disabled = false;
+      }
+    });  
+
+    // Gestion de la connexion  
+    forms.login.addEventListener('submit', async (e) => {  
+      e.preventDefault();  
+      const button = e.target.querySelector('button[type="submit"]');
+      button.classList.add('loading');
+      button.disabled = true;
+
+      try {
+        const phone = document.getElementById('loginPhone').value.trim();  
+        const password = document.getElementById('loginPassword').value.trim();  
+        const message = document.getElementById('loginMessage');  
+
+        if (!validatePhone(phone, message)) return;  
+        if (!validatePassword(password, message)) return;  
+
+        const userRef = ref(database, `users/${phone}`);  
+
+        const snapshot = await get(userRef);  
+        if (!snapshot.exists()) {  
+          showMessage(message, '❌ Numéro non enregistré', 'error');  
+          return;  
+        }  
+
+        const userData = snapshot.val();  
+        if (userData.password !== password) {  
+          showMessage(message, '❌ Mot de passe incorrect', 'error');  
+          return;  
+        }  
+
+        sessionStorage.setItem('userPhone', phone);  
+        window.location.href = 'home.html';  
+      } catch (error) {  
+        showMessage(message, `❌ Erreur: ${error.message}`, 'error');  
+      } finally {
+        button.classList.remove('loading');
+        button.disabled = false;
+      }
+    });  
+
+    function validatePhone(phone, messageElement) {  
+      if (!/^[0-9]{8}$/.test(phone)) {  
+        showMessage(messageElement, '❌ Numéro invalide (8 chiffres requis)', 'error');  
+        return false;  
+      }  
+      return true;  
+    }  
+
+    function validatePassword(password, messageElement) {  
+      if (password.length < 4) {  
+        showMessage(messageElement, '❌ Mot de passe trop court (4 caractères minimum)', 'error');  
+        return false;  
+      }  
+      return true;  
+    }  
+
+    function showMessage(element, text, type) {  
+      element.textContent = text;  
+      element.className = `message ${type}`;  
+      setTimeout(() => {  
+        element.textContent = '';  
+        element.className = 'message';  
+      }, 5000);  
+    }  
+
+    // Afficher le formulaire d'inscription par défaut  
+    showForm('register');  
+  </script>  
+</body>  
+</html>

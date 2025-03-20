@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeu - Trouve le Nombre</title>
+    <style>
+      /* Styles pour le menu */
+      .header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: #333;
+        padding: 10px;
+        z-index: 1000;
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .menu-btn, .close-btn {
+        background: #444;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+      }
+
+      .menu-sidebar {
+        position: fixed;
+        top: 0;
+        right: -300px;
+        width: 250px;
+        height: 100%;
+        background: #333;
+        padding: 20px;
+        transition: 0.3s;
+        z-index: 1001;
+      }
+
+      .menu-sidebar.active {
+        transform: translateX(-300px);
+      }
+
+      .menu-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        backdrop-filter: blur(5px);
+        display: none;
+        z-index: 999;
+      }
+
+      .menu-overlay.active {
+        display: block;
+      }
+
+      .menu-content {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .menu-content button {
+        padding: 15px;
+        background: #444;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+      }
+
+      .menu-content button:hover {
+        background: #555;
+      }
+
+      /* Styles existants modifiés */
+      body {
+        font-family: Arial, sans-serif;
+        background: #222;
+        margin: 0;
+        padding: 20px;
+        padding-top: 60px; /* Ajout pour le header */
+        text-align: center;
+        color: white;
+      }
+
+      .tv-container {
+        width: 90%;
+        max-width: 600px;
+        background: #111;
+        border-radius: 20px;
+        margin: auto;
+        padding: 20px;
+        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);
+        border: 10px solid #444;
+        position: relative;
+      }
+
+      .screen {
+        width: 100%;
+        height: 300px;
+        background: #000;
+        border-radius: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        padding: 10px;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+      }
+
+      .number {
+        width: 20%;
+        height: 60px;
+        background: #555;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        font-weight: bold;
+        cursor: pointer;
+        border-radius: 5px;
+        transition: 0.3s;
+      }
+
+      .number:hover {
+        background: #17a2b8;
+      }
+
+      .eliminated {
+        display: none;
+      }
+
+      .win, .lose {
+        display: none;
+        font-size: 18px;
+        font-weight: bold;
+        margin-top: 15px;
+        padding: 10px;
+        border-radius: 5px;
+      }
+
+      .win {
+        color: #fff;
+        background: #28a745;
+      }
+
+      .lose {
+        color: #fff;
+        background: #dc3545;
+      }
+
+      .balance {
+        font-size: 18px;
+        font-weight: bold;
+        color: #f8c291;
+        margin-bottom: 10px;
+      }
+
+      .chances {
+        font-size: 16px;
+        color: #f1c40f;
+        margin-bottom: 10px;
+      }
+
+      #playBtn {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        margin-top: 10px;
+        width: 100%;
+      }
+
+      #confirmBtn {
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        margin-top: 10px;
+        width: 100%;
+        display: none;
+      }
+
+      #numberInput {
+        margin-top: 20px;
+        padding: 10px;
+        font-size: 18px;
+        width: 90%;
+        max-width: 300px;
+        background: #444;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        text-align: center;
+        transition: 0.3s;
+        display: none;
+      }
+
+      #numberInput:focus {
+        background: #555;
+      }
+
+      /* Animation de vagues pour le chargement de la balance */
+      .loading-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+
+      .loading-screen::after {
+        content: '';
+        width: 60px;
+        height: 60px;
+        border: 4px solid rgba(42, 42, 114, 0.5);
+        border-radius: 50%;
+        animation: wave 1.5s infinite ease-in-out;
+      }
+
+      .loading-screen::before {
+        content: '';
+        width: 60px;
+        height: 60px;
+        border: 4px solid rgba(42, 42, 114, 0.5);
+        border-radius: 50%;
+        animation: wave 1.5s infinite 0.75s ease-in-out;
+        position: absolute;
+      }
+
+      @keyframes wave {
+        0% {
+          transform: scale(0.2);
+          opacity: 1;
+        }
+        100% {
+          transform: scale(1);
+          opacity: 0;
+        }
+      }
+
+      #winAmount {
+        display: none;
+        font-size: 18px;
+        font-weight: bold;
+        margin-top: 15px;
+        padding: 10px;
+        border-radius: 5px;
+        color: #fff;
+        background: #28a745;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Écran de chargement -->
+    <div class="loading-screen" id="loadingScreen"></div>
+
+    <!-- Contenu principal (masqué pendant le chargement) -->
+    <div class="tv-container" id="gameContainer" style="display: none;">
+      <div class="balance">Balance : <span id="balance">Chargement...</span> G</div>
+      <h3>🎯 Trouve le Nombre</h3>
+      <div class="chances" id="chances">Chances restantes : 5</div>
+      <div class="screen" id="numberGrid"></div>
+      <input type="number" id="numberInput" placeholder="Entrez votre numéro" />
+      <button id="confirmBtn">Confirmer</button>
+      <button id="playBtn">Jouer</button>
+      <div class="win" id="winMessage">Bravo ! Vous avez gagné ! 🎉</div>
+      <div class="win" id="winAmount">Vous avez gagné <span id="amountWon">0</span> G ! 🎉</div>
+      <div class="lose" id="loseMessage">Désolé, vous avez perdu. 😞</div>
+    </div>
+
+    <!-- Script du menu -->
+    <script>
+      const menuBtn = document.querySelector('.menu-btn');
+      const closeBtn = document.querySelector('.close-btn');
+      const menuSidebar = document.querySelector('.menu-sidebar');
+      const overlay = document.querySelector('.menu-overlay');
+
+      menuBtn.addEventListener('click', () => {
+        menuSidebar.classList.add('active');
+        overlay.classList.add('active');
+        menuBtn.style.display = 'none';
+        closeBtn.style.display = 'block';
+      });
+
+      closeBtn.addEventListener('click', closeMenu);
+      overlay.addEventListener('click', closeMenu);
+
+      function closeMenu() {
+        menuSidebar.classList.remove('active');
+        overlay.classList.remove('active');
+        menuBtn.style.display = 'block';
+        closeBtn.style.display = 'none';
+      }
+    </script>
+
+    <!-- Script du jeu -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
+      import { getDatabase, ref, get, update } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-database.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyDpB3ReBKoVpat27O7udxzIHboJcUf5nvs",
+        authDomain: "guess-90225.firebaseapp.com",
+        databaseURL: "https://guess-90225-default-rtdb.firebaseio.com",
+        projectId: "guess-90225",
+        storageBucket: "guess-90225.appspot.com",
+        messagingSenderId: "352495188082",
+        appId: "1:352495188082:web:8203d454ca1a1fd5642aeb"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const database = getDatabase(app);
+
+      const storedNumber = sessionStorage.getItem("userPhone");
+      if (!storedNumber) {
+        window.location.href = "index.html";
+      }
+
+      const userId = storedNumber;
+      const balanceElement = document.getElementById("balance");
+      const chancesElement = document.getElementById("chances");
+      const confirmBtn = document.getElementById("confirmBtn");
+      const numberGrid = document.getElementById("numberGrid");
+      const numberInput = document.getElementById("numberInput");
+      const playBtn = document.getElementById("playBtn");
+      const loadingScreen = document.getElementById("loadingScreen");
+      const gameContainer = document.getElementById("gameContainer");
+
+      let balance = 0;
+      let mise = 0;
+      let secretNumber;
+      let attempts;
+      let numbersRemaining;
+
+      async function getUserBalance() {
+        const userRef = ref(database, "users/" + userId);
+        const snapshot = await get(userRef);
+        if (snapshot.exists()) {
+          balance = snapshot.val().balance || 0;
+          balanceElement.textContent = balance;
+          // Masquer l'écran de chargement et afficher le contenu principal
+          loadingScreen.style.display = "none";
+          gameContainer.style.display = "block";
+        } else {
+          balanceElement.textContent = "Utilisateur non trouvé";
+        }
+      }
+
+      async function startGame() {
+        mise = parseInt(prompt("Entrez votre mise en G :"));
+        if (isNaN(mise) || mise < 10) {
+          alert("La mise minimale est de 10G.");
+          return;
+        }
+        if (mise > balance) {
+          alert("Fonds insuffisants. Votre balance est de " + balance + " G.");
+          return;
+        }
+
+        await updateBalance(-mise);
+
+        secretNumber = Math.floor(Math.random() * 100) + 1;
+        attempts = 5;
+        numbersRemaining = Array.from({ length: 100 }, (_, i) => i + 1);
+        chancesElement.textContent = "Chances restantes : " + attempts;
+        document.getElementById("winMessage").style.display = "none";
+        document.getElementById("winAmount").style.display = "none";
+        document.getElementById("loseMessage").style.display = "none";
+        generateNumberGrid();
+        numberInput.style.display = "block";
+        confirmBtn.style.display = "block"; // Afficher le bouton Confirmer
+      }
+
+      function generateNumberGrid() {
+        numberGrid.innerHTML = "";
+        numbersRemaining.forEach(num => {
+          const div = document.createElement("div");
+          div.classList.add("number");
+          div.textContent = num;
+          div.onmouseover = () => highlightNumber(num);
+          div.onmouseout = () => resetNumber(num);
+          numberGrid.appendChild(div);
+        });
+        adjustGridSize();
+      }
+
+      function adjustGridSize() {
+        const allNumbers = document.querySelectorAll(".number");
+        const size = Math.max(10, Math.floor(100 / numbersRemaining.length) * 5);
+        allNumbers.forEach(num => {
+          num.style.width = `${size}px`;
+          num.style.height = `${size}px`;
+          num.style.fontSize = `${size / 3}px`;
+        });
+      }
+
+      function highlightNumber(num) {
+        const allNumbers = document.querySelectorAll(".number");
+        allNumbers.forEach(div => {
+          if (parseInt(div.textContent) === num) {
+            div.style.backgroundColor = "#28a745";
+          }
+        });
+      }
+
+      function resetNumber(num) {
+        const allNumbers = document.querySelectorAll(".number");
+        allNumbers.forEach(div => {
+          if (parseInt(div.textContent) === num) {
+            div.style.backgroundColor = "#555";
+          }
+        });
+      }
+
+      async function makeGuess() {
+        const guessedNumber = parseInt(numberInput.value);
+        if (isNaN(guessedNumber)) return;
+
+        if (guessedNumber === secretNumber) {
+          const amountWon = mise * 3;
+          document.getElementById("winMessage").style.display = "block";
+          document.getElementById("winAmount").style.display = "block";
+          document.getElementById("amountWon").textContent = amountWon;
+          await updateBalance(amountWon);
+          displaySecretNumber();
+          numberInput.style.display = "none";
+          confirmBtn.style.display = "none"; // Masquer le bouton Confirmer
+          return;
+        }
+
+        numbersRemaining = numbersRemaining.filter(n => n !== guessedNumber);
+        if (guessedNumber < secretNumber) {
+          numbersRemaining = numbersRemaining.filter(n => n > guessedNumber);
+        } else {
+          numbersRemaining = numbersRemaining.filter(n => n < guessedNumber);
+        }
+
+        generateNumberGrid();
+        attempts--;
+        chancesElement.textContent = "Chances restantes : " + attempts;
+
+        if (attempts <= 0) {
+          document.getElementById("loseMessage").style.display = "block";
+          displaySecretNumber();
+          numberInput.style.display = "none";
+          confirmBtn.style.display = "none"; // Masquer le bouton Confirmer
+        }
+      }
+
+      function displaySecretNumber() {
+        numberGrid.innerHTML = "";
+        const div = document.createElement("div");
+        div.classList.add("number");
+        div.textContent = secretNumber;
+        numberGrid.appendChild(div);
+      }
+
+      async function updateBalance(amount) {
+        balance += amount;
+        await update(ref(database, "users/" + userId), { balance: balance });
+        balanceElement.textContent = balance;
+      }
+
+      numberInput.addEventListener("input", () => {
+        if (numberInput.value) {
+          confirmBtn.style.display = "block";
+        } else {
+          confirmBtn.style.display = "none";
+        }
+      });
+
+      confirmBtn.addEventListener("click", makeGuess);
+      playBtn.addEventListener("click", startGame);
+      getUserBalance();
+    </script>
+  </body>
+</html>

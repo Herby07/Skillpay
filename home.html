@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Arcade Nexus</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #2a2a72;
+      --secondary: #009ffd;
+      --accent: #ff3c00;
+      --light: #f4f6ff;
+      --shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--light);
+      margin: 0;
+      line-height: 1.6;
+    }
+
+    header {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      padding: 2rem 1rem;
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+
+    .user-panel {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: white;
+      padding: 1.5rem;
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      margin-bottom: 2rem;
+    }
+
+    .balance {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .btn {
+      padding: 0.8rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 500;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-secondary {
+      background: var(--secondary);
+      color: white;
+    }
+
+    .btn-accent {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
+
+    .games-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+    }
+
+    .game-card {
+      background: white;
+      border-radius: 16px;
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      transition: transform 0.3s ease;
+    }
+
+    .game-card:hover {
+      transform: translateY(-5px);
+    }
+
+    .game-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .game-icon {
+      font-size: 2rem;
+      color: var(--secondary);
+    }
+
+    .game-title {
+      margin: 0;
+      color: var(--primary);
+    }
+
+    .game-actions {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .rules-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      display: none;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .rules-table th {
+      background: var(--primary);
+      color: white;
+      padding: 1rem;
+    }
+
+    .rules-table td {
+      padding: 1rem;
+      border-bottom: 1px solid #eee;
+    }
+
+    /* Animation de vagues pour le chargement de la balance */
+    .loading-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .loading-screen::after {
+      content: '';
+      width: 60px;
+      height: 60px;
+      border: 4px solid rgba(42, 42, 114, 0.5);
+      border-radius: 50%;
+      animation: wave 1.5s infinite ease-in-out;
+    }
+
+    .loading-screen::before {
+      content: '';
+      width: 60px;
+      height: 60px;
+      border: 4px solid rgba(42, 42, 114, 0.5);
+      border-radius: 50%;
+      animation: wave 1.5s infinite 0.75s ease-in-out;
+      position: absolute;
+    }
+
+    @keyframes wave {
+      0% {
+        transform: scale(0.2);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 0;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .user-panel {
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+      
+      .action-buttons {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Écran de chargement -->
+  <div class="loading-screen" id="loadingScreen"></div>
+
+  <!-- Contenu principal (masqué pendant le chargement) -->
+  <div id="mainContent" style="display: none;">
+    <header>
+      <h1><i class="fas fa-gamepad"></i> Easy Money</h1>
+    </header>
+
+    <div class="container">
+      <div class="user-panel">
+        <div class="balance">
+          <i class="fas fa-coins"></i>
+          <span id="user-balance">Chargement...</span> G
+        </div>
+        <div class="action-buttons">
+          <button class="btn btn-primary" id="deposit-btn">
+            <i class="fas fa-plus-circle"></i> Dépôt
+          </button>
+          <button class="btn btn-secondary" id="withdraw-btn">
+            <i class="fas fa-arrow-up"></i> Retrait
+          </button>
+          <button class="btn btn-accent" id="profile-btn">
+            <i class="fas fa-user-circle"></i> Profil
+          </button>
+        </div>
+      </div>
+
+      <div class="games-grid">
+        <!-- Jeu d'Empilement -->
+        <div class="game-card" id="game-empilement">
+          <div class="game-header">
+            <i class="fas fa-cubes game-icon"></i>
+            <h2 class="game-title">Empilement de Boîtes</h2>
+          </div>
+          <div class="game-actions">
+            <button class="btn btn-primary play-btn">
+              <i class="fas fa-play"></i> Jouer
+            </button>
+            <button class="btn btn-secondary rules-btn" data-game="empilement">
+              <i class="fas fa-info-circle"></i> Règles
+            </button>
+          </div>
+          <div class="rules-container" id="rules-empilement">
+            <table class="rules-table">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>1</td>
+                  <td>Empilez les boîtes avec précision</td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td>Cote proportionnel à la hauteur</td>
+                </tr>
+                <tr>
+                  <td>3</td>
+                  <td>Le premier boite doit atterir sur la surface et l'autre boite doit atterir sur la boite qui la precèdent</td>
+                </tr>
+                <td>4</td>
+                  <td>Devloppez votre propre strategie pour gagner à tout les coups</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Jeu de Devinette -->
+        <div class="game-card" id="game-devinette">
+          <div class="game-header">
+            <i class="fas fa-search game-icon"></i>
+            <h2 class="game-title">Jeu de Devinette</h2>
+          </div>
+          <div class="game-actions">
+            <button class="btn btn-primary play-btn">
+              <i class="fas fa-play"></i> Jouer
+            </button>
+            <button class="btn btn-secondary rules-btn" data-game="devinette">
+              <i class="fas fa-info-circle"></i> Règles
+            </button>
+          </div>
+          <div class="rules-container" id="rules-devinette">
+            <table class="rules-table">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>1</td>
+                  <td>Devinez un nombre entre 1 et 100</td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td>5 tentatives maximum</td>
+                </tr>
+                <tr>
+                  <td>3</td>
+                  <td>Gagnez 3 fois votre mise en cas de victoire</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDpB3ReBKoVpat27O7udxzIHboJcUf5nvs",
+      authDomain: "guess-90225.firebaseapp.com",
+      databaseURL: "https://guess-90225-default-rtdb.firebaseio.com",
+      projectId: "guess-90225",
+      storageBucket: "guess-90225.appspot.com",
+      messagingSenderId: "352495188082",
+      appId: "1:352495188082:web:8203d454ca1a1fd5642aeb"
+    };
+    firebase.initializeApp(firebaseConfig);
+
+    const userPhone = sessionStorage.getItem('userPhone');
+    const loadingScreen = document.getElementById('loadingScreen');
+    const mainContent = document.getElementById('mainContent');
+
+    if (!userPhone) {
+      window.location.href = 'index.html';
+    } else {
+      const userRef = firebase.database().ref('users/' + userPhone);
+      userRef.once('value').then((snapshot) => {
+        const userData = snapshot.val();
+        if (userData?.balance !== undefined) {
+          document.getElementById('user-balance').textContent = userData.balance;
+          // Masquer l'écran de chargement et afficher le contenu principal
+          loadingScreen.style.display = 'none';
+          mainContent.style.display = 'block';
+        } else {
+          window.location.href = 'index.html';
+        }
+      }).catch((error) => {
+        console.error("Erreur : ", error);
+        window.location.href = 'index.html';
+      });
+    }
+
+    document.getElementById('deposit-btn').addEventListener('click', () => {
+      window.location.href = 'deposit.html';
+    });
+
+    document.getElementById('withdraw-btn').addEventListener('click', () => {
+      window.location.href = 'withdrawal.html';
+    });
+
+    document.getElementById('profile-btn').addEventListener('click', () => {
+      window.location.href = 'profil.html';
+    });
+
+    document.querySelectorAll('.rules-btn').forEach(button => {
+      button.addEventListener('click', function() {
+        const game = this.dataset.game;
+        const rulesTable = document.querySelector(`#rules-${game} .rules-table`);
+        rulesTable.style.display = rulesTable.style.display === 'table' ? 'none' : 'table';
+      });
+    });
+
+    document.querySelectorAll('.play-btn').forEach(button => {
+      button.addEventListener('click', function() {
+        const gameId = this.closest('.game-card').id;
+        if (gameId === 'game-devinette') {
+          window.location.href = 'game.html';
+        } else if (gameId === 'game-empilement') {
+          window.location.href = 'game2.html';
+        }
+      });
+    });
+  </script>
+</body>
+</html>

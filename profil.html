@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profil - Arcade Nexus</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #2a2a72;
+      --secondary: #009ffd;
+      --accent: #ff3c00;
+      --light: #f4f6ff;
+      --dark: #1a1a2e;
+      --shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--light);
+      color: var(--dark);
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 600px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+
+    .profile-card {
+      background: white;
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: var(--shadow);
+    }
+
+    h2 {
+      color: var(--primary);
+      text-align: center;
+      margin-bottom: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+    }
+
+    .profile-info {
+      margin: 2rem 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .info-item {
+      background: var(--light);
+      padding: 1.5rem;
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .info-item strong {
+      display: block;
+      margin-bottom: 0.5rem;
+      color: var(--primary);
+    }
+
+    .info-value {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--secondary);
+    }
+
+    .password-form {
+      margin-top: 2rem;
+    }
+
+    .input-group {
+      margin-bottom: 1.5rem;
+      position: relative;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--primary);
+    }
+
+    input {
+      width: 100%;
+      padding: 1rem 1rem 1rem 3rem;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: border-color 0.3s ease;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--secondary);
+    }
+
+    button {
+      width: 100%;
+      padding: 1rem;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    button:hover {
+      background: var(--secondary);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
+
+    .message {
+      padding: 1rem;
+      border-radius: 8px;
+      margin-top: 1.5rem;
+      text-align: center;
+      border: 2px solid transparent;
+    }
+
+    .error {
+      background: #ffebee;
+      border-color: #ef5350;
+      color: #d32f2f;
+    }
+
+    .success {
+      background: #e8f5e9;
+      border-color: #43a047;
+      color: #2e7d32;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 0 0.5rem;
+        margin: 1rem auto;
+      }
+
+      .profile-card {
+        padding: 1.5rem;
+      }
+
+      .info-item {
+        padding: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="profile-card">
+      <h2>
+        <i class="fas fa-user-circle"></i>
+        Mon Profil
+      </h2>
+
+      <div class="profile-info">
+        <div class="info-item">
+          <strong><i class="fas fa-phone"></i> Numéro</strong>
+          <span class="info-value" id="userPhone"></span>
+        </div>
+        <div class="info-item">
+          <strong><i class="fas fa-coins"></i> Solde</strong>
+          <span class="info-value" id="userBalance">0 G</span>
+        </div>
+      </div>
+
+      <div class="password-form">
+        <h3><i class="fas fa-lock"></i> Changer le mot de passe</h3>
+        
+        <div class="input-group">
+          <i class="fas fa-key input-icon"></i>
+          <input 
+            type="password" 
+            id="oldPassword" 
+            placeholder="Ancien mot de passe"
+            required
+            minlength="4"
+          >
+        </div>
+
+        <div class="input-group">
+          <i class="fas fa-key input-icon"></i>
+          <input 
+            type="password" 
+            id="newPassword" 
+            placeholder="Nouveau mot de passe (4 caractères min)"
+            required
+            minlength="4"
+          >
+        </div>
+
+        <button id="changePasswordBtn">
+          <i class="fas fa-save"></i>
+          Mettre à jour
+        </button>
+
+        <div class="message" id="message"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
+    import { getDatabase, ref, get, update } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDpB3ReBKoVpat27O7udxzIHboJcUf5nvs",
+      authDomain: "guess-90225.firebaseapp.com",
+      databaseURL: "https://guess-90225-default-rtdb.firebaseio.com",
+      projectId: "guess-90225",
+      storageBucket: "guess-90225.appspot.com",
+      messagingSenderId: "352495188082",
+      appId: "1:352495188082:web:8203d454ca1a1fd5642aeb"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+
+    const userPhone = sessionStorage.getItem("userPhone");
+    const messageDiv = document.getElementById("message");
+
+    if (!userPhone) {
+      window.location.href = "index.html";
+    } else {
+      document.getElementById("userPhone").textContent = userPhone;
+      
+      const userRef = ref(database, "users/" + userPhone);
+      get(userRef).then(snapshot => {
+        if (snapshot.exists()) {
+          const balance = parseFloat(snapshot.val().balance).toFixed(2);
+          document.getElementById("userBalance").textContent = `${balance} G`;
+        }
+      });
+    }
+
+    document.getElementById("changePasswordBtn").addEventListener("click", async () => {
+      const oldPassword = document.getElementById("oldPassword").value.trim();
+      const newPassword = document.getElementById("newPassword").value.trim();
+      messageDiv.className = "message";
+
+      if (oldPassword.length < 4 || newPassword.length < 4) {
+        showMessage("Le mot de passe doit contenir au moins 4 caractères", "error");
+        return;
+      }
+
+      try {
+        const userRef = ref(database, "users/" + userPhone);
+        const snapshot = await get(userRef);
+
+        if (!snapshot.exists()) {
+          showMessage("Utilisateur introuvable", "error");
+          return;
+        }
+
+        const userData = snapshot.val();
+        if (userData.password !== oldPassword) {
+          showMessage("Ancien mot de passe incorrect", "error");
+          return;
+        }
+
+        await update(userRef, { password: newPassword });
+        showMessage("✅ Mot de passe mis à jour avec succès", "success");
+        document.getElementById("oldPassword").value = "";
+        document.getElementById("newPassword").value = "";
+        
+      } catch (error) {
+        showMessage(`❌ Erreur : ${error.message}`, "error");
+      }
+    });
+
+    function showMessage(text, type) {
+      messageDiv.textContent = text;
+      messageDiv.className = `message ${type}`;
+      setTimeout(() => {
+        messageDiv.className = "message";
+        messageDiv.textContent = "";
+      }, 5000);
+    }
+  </script>
+</body>
+</html>
