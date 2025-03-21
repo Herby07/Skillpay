@@ -321,7 +321,7 @@
         return;
       }
 
-      if (!transactionCode || transactionCode.length !== 14) {
+      if (!transactionCode || transactionCode.length < 5) {
         showMessage("Entrez un vrai code de transactio'", 'error');
         return;
       }
