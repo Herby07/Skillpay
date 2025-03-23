@@ -183,7 +183,6 @@
 <body>
   <!-- Écran de chargement -->
   <div class="loading-screen" id="loadingScreen"></div>
-
   <!-- Contenu principal (masqué pendant le chargement) -->
   <div id="game-container" style="display: none;">
     <canvas id="gameCanvas"></canvas>
@@ -197,12 +196,11 @@
       <button id="startBtn">Jouer</button>
     </div>
   </div>
-
   <script type="module">
     // Import Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
     import { getDatabase, ref, get, update } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-database.js";
-    
+      
     // Configuration Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyDpB3ReBKoVpat27O7udxzIHboJcUf5nvs",
@@ -230,13 +228,14 @@
 
     let isGameOver = false;
     let gameStarted = false;
-    let score = 0; // Début à 1 pour afficher "1X" dès la première manche
+    let score = 0; // Cote initiale affichée en "0X"
     let cubeSize = 30;
     const gravity = 1.5;
     let blocks = [];
     let currentCube = null;
     let betAmount = 0;
     let balance = 1000; // Valeur par défaut, remplacée par la balance en Firebase
+    let miseRestant = 0; // Valeur récupérée depuis Firebase dans le champ "mise_restant"
 
     // Références UI
     const coteDisplay = document.getElementById("coteValue");
@@ -251,12 +250,13 @@
     const loadingScreen = document.getElementById("loadingScreen");
     const gameContainer = document.getElementById("game-container");
 
-    // Charger la balance du joueur depuis Firebase
+    // Charger la balance et la mise_restant du joueur depuis Firebase
     const userRef = ref(database, 'users/' + userId);
     get(userRef).then(snapshot => {
       if (snapshot.exists()) {
         const data = snapshot.val();
-        balance = data.balance;
+        balance = parseFloat(data.balance) || 0;
+        miseRestant = parseFloat(data.mise_restant) || 0;
         balanceDisplay.innerText = balance;
         // Masquer l'écran de chargement et afficher le contenu principal
         loadingScreen.style.display = "none";
@@ -268,10 +268,11 @@
       console.error(error);
     });
 
-    // Fonction pour mettre à jour la balance dans Firebase
+    // Fonction pour mettre à jour la balance et la mise_restant dans Firebase
     function updateBalanceInFirebase() {
       update(ref(database, 'users/' + userId), {
-        balance: balance
+        balance: balance,
+        mise_restant: miseRestant
       });
     }
 
@@ -395,6 +396,7 @@
       });
       score++; // Augmenter la cote
       coteDisplay.innerText = score + "X";
+      // Réduction de la taille et augmentation de la vitesse uniquement si le joueur tente de passer au niveau suivant
       cubeSize = Math.max(15, cubeSize * 0.8);
       oscillator.speed *= 1.1;
       currentCube = null;
@@ -406,7 +408,11 @@
         isGameOver = true;
         lossMessage.style.display = "block";
         lossMessage.style.animation = "fadeInOut 2s ease-in-out";
-        // Mise à jour de la balance dans Firebase en cas de défaite
+        // Dans tous les cas, même au niveau 1 ou 2, la mise restante est réduite de la mise
+        if(miseRestant > 0) {
+          const deduction = Math.min(betAmount, miseRestant);
+          miseRestant -= deduction;
+        }
         updateBalanceInFirebase();
         setTimeout(() => {
           lossMessage.style.display = "none";
@@ -415,13 +421,18 @@
       }
     }
 
+    // La fonction cashOut modifiée pour réduire également la mise restante en cas de victoire au niveau 2
     function cashOut() {
       // Le joueur récupère sa mise multipliée par la cote
       const winnings = betAmount * score;
       balance += winnings;
       balanceDisplay.innerText = balance;
+      // On déduit la mise, même en cas de victoire au niveau 2
+      if(miseRestant > 0) {
+        const deduction = Math.min(betAmount, miseRestant);
+        miseRestant -= deduction;
+      }
       updateBalanceInFirebase();
-      // Afficher le message de victoire
       winAmount.innerText = `+${winnings} G`;
       winMessage.style.display = "block";
       winMessage.style.animation = "fadeInOut 2s ease-in-out";
@@ -432,11 +443,17 @@
     }
 
     function resetGame() {
+      if (balance <= 0) {
+        balance = 0;
+        balanceDisplay.innerText = balance;
+        alert("Vous n'avez plus d'argent !");
+      }
       isGameOver = false;
       gameStarted = false;
-      blocks = [];
+      betAmount = 0;
       score = 0;
       cubeSize = 30;
+      blocks = [];
       currentCube = null;
       oscillator = {
         x: canvas.width / 2,
@@ -451,9 +468,14 @@
       startScreen.style.display = "flex";
     }
 
+    // Le bouton cash-out n'est affiché et actif qu'à partir du niveau 2
     function updateCashOutButton() {
-      // Le bouton affiche le gain potentiel (mise x cote)
-      actionBtn.innerText = "Cash-out (" + (betAmount * score) + " G)";
+      if(score >= 2) {
+        actionBtn.style.display = "block";
+        actionBtn.innerText = "Cash-out (" + (betAmount * score) + " G)";
+      } else {
+        actionBtn.style.display = "none";
+      }
     }
 
     function drawBoat() {
@@ -485,7 +507,6 @@
       if (currentCube) {
         drawCube(currentCube.x, currentCube.y, currentCube.size, currentCube.rotation, currentCube.unstable);
       }
-      // Dessiner l'oscillateur
       ctx.beginPath();
       ctx.moveTo(oscillator.x, oscillator.y);
       ctx.lineTo(
@@ -527,18 +548,20 @@
       }
       betAmount = bet;
       balance -= betAmount;
+      // Ici, on ne déduit plus la mise_restante dès le départ.
       balanceDisplay.innerText = balance;
-      updateBalanceInFirebase(); // Mise à jour de la balance dès la déduction de la mise
+      updateBalanceInFirebase();
       gameStarted = true;
       startScreen.style.display = "none";
-      actionBtn.style.display = "block";
+      // Le bouton cash-out apparaîtra uniquement quand le score atteindra 2 ou plus
       updateCashOutButton();
       gameLoop();
     });
 
     // Bouton cash-out
     actionBtn.addEventListener("click", function() {
-      if (gameStarted && score > 0 && !isGameOver) {
+      // Le cash-out n'est autorisé qu'à partir du niveau 2
+      if (gameStarted && score >= 2 && !isGameOver) {
         cashOut();
       }
     });
@@ -547,4 +570,4 @@
     canvas.addEventListener("click", dropCube);
   </script>
 </body>
-</html>
+  </html>
