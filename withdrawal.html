@@ -250,22 +250,52 @@
           return;
         }
 
-        // Vérifier le solde
+        // Vérifier le solde et la mise_restant
         const userRef = ref(database, `users/${phone}`);
         const userSnapshot = await get(userRef);
         const userData = userSnapshot.val();
 
-        if (!userData?.balance) {
-          showMessage("Solde indisponible", 'error');
+        if (userData.balance === undefined || userData.balance === null ||
+            userData.mise_restant === undefined || userData.mise_restant === null) {
+          showMessage("Solde ou mise restante indisponible", 'error');
           return;
         }
 
         const currentBalance = parseFloat(userData.balance);
+        const miseRestant = parseFloat(userData.mise_restant);
+
+        // Si mise_restant est > 0, l'utilisateur doit encore parier
+        if (miseRestant > 0) {
+          showMessage(`Il vous reste ${miseRestant} G à parier avant de pouvoir effectuer un retrait.`, 'error');
+          return;
+        }
+
         if (currentBalance < amount) {
           showMessage("Solde insuffisant", 'error');
           return;
         }
 
+        // Si l'utilisateur a été parrainé, transférer 5% du montant retiré dans le bonus du parrain
+        if (userData.his_code) {
+          const allUsersRef = ref(database, "users");
+          const allUsersSnapshot = await get(allUsersRef);
+          const allUsers = allUsersSnapshot.val();
+          let parrainPhone = null;
+          let parrainBonus = 0;
+          Object.entries(allUsers).forEach(([p, u]) => {
+            if (u.my_code === userData.his_code) {
+              parrainPhone = p;
+              parrainBonus = parseFloat(u.bonus || 0);
+            }
+          });
+          if (parrainPhone) {
+            const bonusToAdd = amount * 0.05;
+            const parrainRef = ref(database, `users/${parrainPhone}`);
+            await update(parrainRef, { bonus: parrainBonus + bonusToAdd });
+          }
+        }
+
+        // Enregistrer la demande de retrait et déduire le montant du solde
         await push(retraitRef, { phone, amount, timestamp: Date.now() });
         await update(userRef, { balance: currentBalance - amount });
 
