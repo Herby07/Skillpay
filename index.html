@@ -59,6 +59,9 @@
       width: 60%;  
       padding: 3rem 2rem;  
       position: relative;  
+      display: flex;  
+      flex-direction: column;  
+      justify-content: center;  
     }  
 
     .auth-form {  
@@ -111,6 +114,14 @@
       border-color: var(--secondary);  
     }  
 
+    /* Style pour le bouton affichant/masquant le mot de passe */  
+    .toggle-password {  
+      position: absolute;  
+      right: 1rem;  
+      cursor: pointer;  
+      color: #666;  
+    }  
+
     .btn {  
       width: 100%;  
       padding: 1rem;  
@@ -157,41 +168,74 @@
       color: #d32f2f;  
     }  
 
-    /* Animation de vagues */
-    .btn.loading::after {
-      content: '';
-      position: absolute;
-      width: 40px;
-      height: 40px;
-      border: 3px solid rgba(255, 255, 255, 0.5);
-      border-radius: 50%;
-      animation: wave 1s infinite linear;
-    }
+    /* Bouton "Mot de passe oublié" */  
+    .forgot-btn {  
+      background: none;  
+      border: none;  
+      color: var(--secondary);  
+      cursor: pointer;  
+      text-decoration: underline;  
+      font-size: 0.9rem;  
+      margin-top: 0.5rem;  
+    }  
 
-    .btn.loading::before {
-      content: '';
-      position: absolute;
-      width: 40px;
-      height: 40px;
-      border: 3px solid rgba(255, 255, 255, 0.5);
-      border-radius: 50%;
-      animation: wave 1s infinite 0.5s linear;
-    }
+    /* Animation de vagues */  
+    .btn.loading::after {  
+      content: '';  
+      position: absolute;  
+      width: 40px;  
+      height: 40px;  
+      border: 3px solid rgba(255, 255, 255, 0.5);  
+      border-radius: 50%;  
+      animation: wave 1s infinite linear;  
+    }  
 
-    .btn.loading span {
-      visibility: hidden;
-    }
+    .btn.loading::before {  
+      content: '';  
+      position: absolute;  
+      width: 40px;  
+      height: 40px;  
+      border: 3px solid rgba(255, 255, 255, 0.5);  
+      border-radius: 50%;  
+      animation: wave 1s infinite 0.5s linear;  
+    }  
 
-    @keyframes wave {
-      0% {
-        transform: scale(0.2);
-        opacity: 1;
-      }
-      100% {
-        transform: scale(1);
-        opacity: 0;
-      }
-    }
+    .btn.loading span {  
+      visibility: hidden;  
+    }  
+
+    @keyframes wave {  
+      0% {  
+        transform: scale(0.2);  
+        opacity: 1;  
+      }  
+      100% {  
+        transform: scale(1);  
+        opacity: 0;  
+      }  
+    }  
+
+    .info-text {  
+      text-align: center;  
+      color: #666;  
+      margin-top: 1.5rem;  
+      font-size: 0.9rem;  
+      width: 100%;  
+    }  
+
+    /* Style pour le lien WhatsApp */  
+    .whatsapp-link {  
+      color: var(--secondary);  
+      text-decoration: none;  
+      font-weight: bold;  
+      display: inline-flex;  
+      align-items: center;  
+      gap: 0.5rem;  
+    }  
+
+    .whatsapp-link:hover {  
+      text-decoration: underline;  
+    }  
 
     @media (max-width: 768px) {  
       .auth-container {  
@@ -214,7 +258,6 @@
         left: 2.5rem;  
       }  
     }
-
   </style>  
 </head>  
 <body>  
@@ -240,28 +283,35 @@
           <input   
             type="tel"   
             id="registerPhone"   
-            placeholder="numero de telephone"  
+            placeholder="Numéro de téléphone"  
             required  
             pattern="[0-9]{8}"  
             title="8 chiffres sans espace"  
           >  
         </div>  
 
-        <div class="input-group">  
+        <div class="input-group" style="position: relative;">  
           <input   
             type="password"   
             id="registerPassword"   
-            placeholder="Mot de passe "  
+            placeholder="Mot de passe"  
             required  
             minlength="4"  
+          >  
+          <i class="fas fa-eye toggle-password" data-target="registerPassword"></i>  
+        </div>  
+
+        <!-- Champ facultatif pour le code d'invitation -->  
+        <div class="input-group">  
+          <input   
+            type="text"   
+            id="invitationCode"   
+            placeholder="Code d'invitation (optionnel)"  
           >  
         </div>  
 
         <button type="submit" class="btn">  
-          <span>
-            <i class="fas fa-check"></i>  
-            S'inscrire
-          </span>
+          <span><i class="fas fa-check"></i> S'inscrire</span>  
         </button>  
         <div class="message" id="registerMessage"></div>  
       </form>  
@@ -275,36 +325,43 @@
           <input   
             type="tel"   
             id="loginPhone"   
-            placeholder="numero de telephone"  
+            placeholder="Numéro de téléphone"  
             required  
             pattern="[0-9]{8}"  
             title="8 chiffres sans espace"  
           >  
         </div>  
 
-        <div class="input-group">  
+        <div class="input-group" style="position: relative;">  
           <input   
             type="password"   
             id="loginPassword"   
             placeholder="Mot de passe"  
             required  
           >  
+          <i class="fas fa-eye toggle-password" data-target="loginPassword"></i>  
         </div>  
 
         <button type="submit" class="btn">  
-          <span>
-            <i class="fas fa-check"></i>  
-            Se connecter
-          </span>
+          <span><i class="fas fa-check"></i> Se connecter</span>  
         </button>  
+        <!-- Bouton "Mot de passe oublié", initialement caché -->  
+        <button type="button" id="forgotBtn" class="forgot-btn" style="display:none;">Mot de passe oublié ?</button>  
         <div class="message" id="loginMessage"></div>  
       </form>  
-    </div>
+
+      <!-- Paragraphe d'assistance via WhatsApp -->  
+      <p class="info-text" style="margin-top: 1rem;">  
+        <i class="fab fa-whatsapp" style="color: #25D366; font-size: 1.2rem;"></i>  
+        Pour toute assistance, veuillez contacter notre agent sur WhatsApp en cliquant  
+        <a class="whatsapp-link" href="https://wa.me/50942710675" target="_blank">ici</a>.  
+      </p>  
+    </div>  
   </div>    
 
   <script type="module">  
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";  
-    import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-database.js";  
+    import { getDatabase, ref, get, set, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-database.js";  
   
     const firebaseConfig = {  
       apiKey: "AIzaSyDpB3ReBKoVpat27O7udxzIHboJcUf5nvs",  
@@ -324,6 +381,8 @@
       register: document.getElementById('registerForm'),  
       login: document.getElementById('loginForm')  
     };  
+
+    const forgotBtn = document.getElementById('forgotBtn');
   
     document.querySelectorAll('.switch-btn').forEach(btn => {  
       btn.addEventListener('click', (e) => {  
@@ -333,54 +392,108 @@
     });  
   
     function showForm(formType) {  
+      // Cacher le bouton "Mot de passe oublié" lors du changement de formulaire  
+      forgotBtn.style.display = 'none';
       Object.values(forms).forEach(form => form.classList.remove('active'));  
       forms[formType].classList.add('active');  
     }  
   
+    // Fonction pour générer un code aléatoire (8 caractères)  
+    function generateCode(length = 8) {  
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';  
+      let result = '';  
+      for (let i = 0; i < length; i++) {  
+        result += chars.charAt(Math.floor(Math.random() * chars.length));  
+      }  
+      return result;  
+    }  
+  
+    // Fonction pour basculer l'affichage du mot de passe  
+    document.querySelectorAll('.toggle-password').forEach(icon => {  
+      icon.addEventListener('click', () => {  
+        const targetId = icon.dataset.target;  
+        const input = document.getElementById(targetId);  
+        if (input.type === 'password') {  
+          input.type = 'text';  
+          icon.classList.remove('fa-eye');  
+          icon.classList.add('fa-eye-slash');  
+        } else {  
+          input.type = 'password';  
+          icon.classList.remove('fa-eye-slash');  
+          icon.classList.add('fa-eye');  
+        }  
+      });  
+    });  
+  
     // Gestion de l'inscription  
     forms.register.addEventListener('submit', async (e) => {  
       e.preventDefault();  
-      const button = e.target.querySelector('button[type="submit"]');
-      button.classList.add('loading');
+      const button = e.target.querySelector('button[type="submit"]');  
+      button.classList.add('loading');  
       button.disabled = true;
 
       try {
         const phone = document.getElementById('registerPhone').value.trim();  
         const password = document.getElementById('registerPassword').value.trim();  
+        const invitation = document.getElementById('invitationCode').value.trim();  
         const message = document.getElementById('registerMessage');  
 
         if (!validatePhone(phone, message)) return;  
         if (!validatePassword(password, message)) return;  
 
         const userRef = ref(database, `users/${phone}`);  
-
         const snapshot = await get(userRef);  
         if (snapshot.exists()) {  
           showMessage(message, '❌ Ce numéro est déjà enregistré', 'error');  
           return;  
         }  
 
+        // Vérifier le code d'invitation si un code est fourni  
+        if (invitation !== "") {  
+          // Récupérer tous les utilisateurs pour vérifier si le code existe en tant que my_code  
+          const allUsersSnapshot = await get(ref(database, 'users'));  
+          let codeValide = false;  
+          if (allUsersSnapshot.exists()) {  
+            const allUsers = allUsersSnapshot.val();  
+            for (const key in allUsers) {  
+              if (allUsers[key].my_code === invitation) {  
+                codeValide = true;  
+                break;  
+              }  
+            }  
+          }  
+          if (!codeValide) {  
+            showMessage(message, '❌ Code d\'invitation invalide', 'error');  
+            return;  
+          }  
+        }  
+
+        // Génération du code parrainage personnel  
+        const myCode = generateCode();
+
         await set(userRef, {  
           password: password,  
           balance: 0.00,  
-          created: Date.now()  
+          created: Date.now(),  
+          his_code: invitation, // code d'invitation fourni (peut être vide)  
+          my_code: myCode  
         });  
 
         sessionStorage.setItem('userPhone', phone);  
         window.location.href = 'home.html';  
       } catch (error) {  
-        showMessage(message, `❌ Erreur: ${error.message}`, 'error');  
-      } finally {
-        button.classList.remove('loading');
-        button.disabled = false;
+        showMessage(document.getElementById('registerMessage'), `❌ Erreur: ${error.message}`, 'error');  
+      } finally {  
+        button.classList.remove('loading');  
+        button.disabled = false;  
       }
     });  
-
+  
     // Gestion de la connexion  
     forms.login.addEventListener('submit', async (e) => {  
       e.preventDefault();  
-      const button = e.target.querySelector('button[type="submit"]');
-      button.classList.add('loading');
+      const button = e.target.querySelector('button[type="submit"]');  
+      button.classList.add('loading');  
       button.disabled = true;
 
       try {
@@ -392,7 +505,6 @@
         if (!validatePassword(password, message)) return;  
 
         const userRef = ref(database, `users/${phone}`);  
-
         const snapshot = await get(userRef);  
         if (!snapshot.exists()) {  
           showMessage(message, '❌ Numéro non enregistré', 'error');  
@@ -402,19 +514,26 @@
         const userData = snapshot.val();  
         if (userData.password !== password) {  
           showMessage(message, '❌ Mot de passe incorrect', 'error');  
+          // Afficher le bouton "Mot de passe oublié"  
+          forgotBtn.style.display = 'block';  
           return;  
         }  
 
         sessionStorage.setItem('userPhone', phone);  
         window.location.href = 'home.html';  
       } catch (error) {  
-        showMessage(message, `❌ Erreur: ${error.message}`, 'error');  
-      } finally {
-        button.classList.remove('loading');
-        button.disabled = false;
+        showMessage(document.getElementById('loginMessage'), `❌ Erreur: ${error.message}`, 'error');  
+      } finally {  
+        button.classList.remove('loading');  
+        button.disabled = false;  
       }
     });  
-
+  
+    // Gestion du bouton "Mot de passe oublié"  
+    forgotBtn.addEventListener('click', () => {  
+      alert("Veuillez contacter notre agent sur WhatsApp en cliquant sur le lien d'assistance.");  
+    });  
+  
     function validatePhone(phone, messageElement) {  
       if (!/^[0-9]{8}$/.test(phone)) {  
         showMessage(messageElement, '❌ Numéro invalide (8 chiffres requis)', 'error');  
@@ -422,7 +541,7 @@
       }  
       return true;  
     }  
-
+  
     function validatePassword(password, messageElement) {  
       if (password.length < 4) {  
         showMessage(messageElement, '❌ Mot de passe trop court (4 caractères minimum)', 'error');  
@@ -430,7 +549,7 @@
       }  
       return true;  
     }  
-
+  
     function showMessage(element, text, type) {  
       element.textContent = text;  
       element.className = `message ${type}`;  
@@ -439,9 +558,9 @@
         element.className = 'message';  
       }, 5000);  
     }  
-
+  
     // Afficher le formulaire d'inscription par défaut  
     showForm('register');  
   </script>  
 </body>  
-</html>
+          </html>
