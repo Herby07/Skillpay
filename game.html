@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="fr">
   <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Jeu - Trouve le Nombre</title>
     <style>
       /* Styles pour le menu */
@@ -17,8 +17,8 @@
         display: flex;
         justify-content: space-between;
       }
-
-      .menu-btn, .close-btn {
+      .menu-btn,
+      .close-btn {
         background: #444;
         color: white;
         border: none;
@@ -27,7 +27,6 @@
         cursor: pointer;
         font-size: 16px;
       }
-
       .menu-sidebar {
         position: fixed;
         top: 0;
@@ -39,33 +38,28 @@
         transition: 0.3s;
         z-index: 1001;
       }
-
       .menu-sidebar.active {
         transform: translateX(-300px);
       }
-
       .menu-overlay {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0,0,0,0.5);
+        background: rgba(0, 0, 0, 0.5);
         backdrop-filter: blur(5px);
         display: none;
         z-index: 999;
       }
-
       .menu-overlay.active {
         display: block;
       }
-
       .menu-content {
         display: flex;
         flex-direction: column;
         gap: 10px;
       }
-
       .menu-content button {
         padding: 15px;
         background: #444;
@@ -75,11 +69,9 @@
         cursor: pointer;
         font-size: 16px;
       }
-
       .menu-content button:hover {
         background: #555;
       }
-
       /* Styles existants modifiés */
       body {
         font-family: Arial, sans-serif;
@@ -90,7 +82,6 @@
         text-align: center;
         color: white;
       }
-
       .tv-container {
         width: 90%;
         max-width: 600px;
@@ -102,7 +93,6 @@
         border: 10px solid #444;
         position: relative;
       }
-
       .screen {
         width: 100%;
         height: 300px;
@@ -116,7 +106,6 @@
         align-items: center;
         overflow: hidden;
       }
-
       .number {
         width: 20%;
         height: 60px;
@@ -131,16 +120,14 @@
         border-radius: 5px;
         transition: 0.3s;
       }
-
       .number:hover {
         background: #17a2b8;
       }
-
       .eliminated {
         display: none;
       }
-
-      .win, .lose {
+      .win,
+      .lose {
         display: none;
         font-size: 18px;
         font-weight: bold;
@@ -148,30 +135,25 @@
         padding: 10px;
         border-radius: 5px;
       }
-
       .win {
         color: #fff;
         background: #28a745;
       }
-
       .lose {
         color: #fff;
         background: #dc3545;
       }
-
       .balance {
         font-size: 18px;
         font-weight: bold;
         color: #f8c291;
         margin-bottom: 10px;
       }
-
       .chances {
         font-size: 16px;
         color: #f1c40f;
         margin-bottom: 10px;
       }
-
       #playBtn {
         background: #007bff;
         color: white;
@@ -183,7 +165,6 @@
         margin-top: 10px;
         width: 100%;
       }
-
       #confirmBtn {
         background: #28a745;
         color: white;
@@ -196,7 +177,6 @@
         width: 100%;
         display: none;
       }
-
       #numberInput {
         margin-top: 20px;
         padding: 10px;
@@ -211,11 +191,9 @@
         transition: 0.3s;
         display: none;
       }
-
       #numberInput:focus {
         background: #555;
       }
-
       /* Animation de vagues pour le chargement de la balance */
       .loading-screen {
         position: fixed;
@@ -229,7 +207,6 @@
         justify-content: center;
         z-index: 1000;
       }
-
       .loading-screen::after {
         content: '';
         width: 60px;
@@ -238,7 +215,6 @@
         border-radius: 50%;
         animation: wave 1.5s infinite ease-in-out;
       }
-
       .loading-screen::before {
         content: '';
         width: 60px;
@@ -248,7 +224,6 @@
         animation: wave 1.5s infinite 0.75s ease-in-out;
         position: absolute;
       }
-
       @keyframes wave {
         0% {
           transform: scale(0.2);
@@ -259,7 +234,6 @@
           opacity: 0;
         }
       }
-
       #winAmount {
         display: none;
         font-size: 18px;
@@ -337,7 +311,6 @@
       if (!storedNumber) {
         window.location.href = "index.html";
       }
-
       const userId = storedNumber;
       const balanceElement = document.getElementById("balance");
       const chancesElement = document.getElementById("chances");
@@ -350,6 +323,7 @@
 
       let balance = 0;
       let mise = 0;
+      let miseRestant = 0; // Valeur récupérée depuis Firebase dans le champ "mise_restant"
       let secretNumber;
       let attempts;
       let numbersRemaining;
@@ -358,7 +332,9 @@
         const userRef = ref(database, "users/" + userId);
         const snapshot = await get(userRef);
         if (snapshot.exists()) {
-          balance = snapshot.val().balance || 0;
+          const data = snapshot.val();
+          balance = data.balance || 0;
+          miseRestant = data.mise_restant || 0;
           balanceElement.textContent = balance;
           // Masquer l'écran de chargement et afficher le contenu principal
           loadingScreen.style.display = "none";
@@ -366,6 +342,11 @@
         } else {
           balanceElement.textContent = "Utilisateur non trouvé";
         }
+      }
+
+      async function updateUserData() {
+        await update(ref(database, "users/" + userId), { balance: balance, mise_restant: miseRestant });
+        balanceElement.textContent = balance;
       }
 
       async function startGame() {
@@ -378,9 +359,14 @@
           alert("Fonds insuffisants. Votre balance est de " + balance + " G.");
           return;
         }
-
-        await updateBalance(-mise);
-
+        // Déduire la mise du solde
+        balance -= mise;
+        // Soustraction de la mise du champ mise_restant sans descendre sous 0
+        if (miseRestant > 0) {
+          const deduction = Math.min(mise, miseRestant);
+          miseRestant -= deduction;
+        }
+        await updateUserData();
         secretNumber = Math.floor(Math.random() * 100) + 1;
         attempts = 5;
         numbersRemaining = Array.from({ length: 100 }, (_, i) => i + 1);
@@ -390,7 +376,7 @@
         document.getElementById("loseMessage").style.display = "none";
         generateNumberGrid();
         numberInput.style.display = "block";
-        confirmBtn.style.display = "block"; // Afficher le bouton Confirmer
+        confirmBtn.style.display = "block";
       }
 
       function generateNumberGrid() {
@@ -443,10 +429,10 @@
           document.getElementById("winMessage").style.display = "block";
           document.getElementById("winAmount").style.display = "block";
           document.getElementById("amountWon").textContent = amountWon;
-          await updateBalance(amountWon);
+          await updateUserDataWithWinnings(amountWon);
           displaySecretNumber();
           numberInput.style.display = "none";
-          confirmBtn.style.display = "none"; // Masquer le bouton Confirmer
+          confirmBtn.style.display = "none";
           return;
         }
 
@@ -465,7 +451,7 @@
           document.getElementById("loseMessage").style.display = "block";
           displaySecretNumber();
           numberInput.style.display = "none";
-          confirmBtn.style.display = "none"; // Masquer le bouton Confirmer
+          confirmBtn.style.display = "none";
         }
       }
 
@@ -477,9 +463,9 @@
         numberGrid.appendChild(div);
       }
 
-      async function updateBalance(amount) {
-        balance += amount;
-        await update(ref(database, "users/" + userId), { balance: balance });
+      async function updateUserDataWithWinnings(amountWon) {
+        balance += amountWon;
+        await update(ref(database, "users/" + userId), { balance: balance, mise_restant: miseRestant });
         balanceElement.textContent = balance;
       }
 
@@ -496,4 +482,4 @@
       getUserBalance();
     </script>
   </body>
-</html>
+  </html>
