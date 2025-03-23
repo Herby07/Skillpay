@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Home</title>
+  <title>Arcade Nexus</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -86,6 +86,12 @@
 
     .btn-accent {
       background: var(--accent);
+      color: white;
+    }
+    
+    /* Nouveau style pour le bouton Parrainage */
+    .btn-referral {
+      background: #28a745;
       color: white;
     }
 
@@ -239,6 +245,9 @@
           <button class="btn btn-accent" id="profile-btn">
             <i class="fas fa-user-circle"></i> Profil
           </button>
+          <button class="btn btn-referral" id="referral-btn">
+            <i class="fas fa-users"></i> Parrainage
+          </button>
         </div>
       </div>
 
@@ -276,10 +285,11 @@
                 </tr>
                 <tr>
                   <td>3</td>
-                  <td>La première boite doit atterir sur la surface et l'autre boite doit atterir sur la boite qui la precède et ainsi de suite</td>
+                  <td>La première boîte doit atterrir sur la surface et l'autre boîte doit atterrir sur la boîte précédente</td>
                 </tr>
-                <td>4</td>
-                  <td>Devloppez votre propre strategie pour gagner à tout les coups</td>
+                <tr>
+                  <td>4</td>
+                  <td>Développez votre propre stratégie pour gagner à tous les coups</td>
                 </tr>
               </tbody>
             </table>
@@ -375,6 +385,11 @@
 
     document.getElementById('profile-btn').addEventListener('click', () => {
       window.location.href = 'profil.html';
+    });
+
+    // Gestion du bouton Parrainage
+    document.getElementById('referral-btn').addEventListener('click', () => {
+      window.location.href = 'referral.html';
     });
 
     document.querySelectorAll('.rules-btn').forEach(button => {
